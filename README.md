@@ -1,7 +1,7 @@
 # 🕵️‍♀⃣ SpecterX - Red Team Reconnaissance Framework
 
 **Version:** 1.0
-**Author:** Mr Robot
+**Author:** ShadowCrawlerX
 **License:** MIT
 **Platform:** Windows / Linux
 **Language:** Python 3.9+
@@ -168,7 +168,7 @@ MIT — free to use, modify, and contribute. Just don't be a skiddie.
 
 ---
 
-## 🧙 About Mr Robot
+## 🧙 About ShadowCrawlerX
 
 A student of hacking, automation, and Python — building tools that are practical, powerful, and personal. SpecterX is the culmination of hands-on effort, research, and passion.
 
