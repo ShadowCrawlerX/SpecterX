@@ -1,0 +1,18 @@
+# Requirements for Python project
+# Based on these imports:
+# import dns.resolver
+# import whois
+# paramiko
+# netifaces
+
+# DNS toolkit for DNS queries and subdomain enumeration
+dnspython>=2.2.0
+
+# Python WHOIS library for domain OSINT
+python-whois>=0.7.3
+
+# SSH client library for SSH connections and operations
+paramiko>=2.9.0
+
+# Network interface detection and system network info
+netifaces>=0.11.0

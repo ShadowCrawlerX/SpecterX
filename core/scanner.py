@@ -210,9 +210,9 @@ def run_web_fingerprint():
 def run_lan_ip_scan():
     from utils.reporter import write_html_section
     import netifaces, ipaddress, subprocess, platform
-
+    
     print("\n🌐 [LAN IP Scanner]")
-
+    
     try:
         gateway = netifaces.gateways()['default'][netifaces.AF_INET][1]
         iface_data = netifaces.ifaddresses(gateway)[netifaces.AF_INET][0]
@@ -227,7 +227,7 @@ def run_lan_ip_scan():
         print(f"[❌] Failed to detect network: {e}")
         input("Press Enter to return...")
         return
-
+    
     print("\n[⚡] Pinging subnet... (this may take a few seconds)")
     # Ping sweep to populate ARP cache (some OSes need this)
     for ip in subnet.hosts():
@@ -236,10 +236,10 @@ def run_lan_ip_scan():
             subprocess.run(["ping", "-n", "1", "-w", "300", ip_str], stdout=subprocess.DEVNULL)
         else:
             subprocess.run(["ping", "-c", "1", "-W", "1", ip_str], stdout=subprocess.DEVNULL)
-
+    
     print("[📡] Collecting live devices from ARP table...\n")
-    devices = []
-
+    all_devices = []
+    
     try:
         if platform.system().lower() == "windows":
             output = subprocess.check_output("arp -a", shell=True).decode()
@@ -248,29 +248,120 @@ def run_lan_ip_scan():
                     parts = line.split()
                     if len(parts) >= 2:
                         ip, mac = parts[0], parts[1]
-                        devices.append((ip, mac))
+                        all_devices.append((ip, mac))
         else:
             output = subprocess.check_output("arp -a", shell=True).decode()
             for line in output.splitlines():
                 if "(" in line:
                     ip = line.split("(")[1].split(")")[0]
                     mac = line.split()[-1]
-                    devices.append((ip, mac))
+                    all_devices.append((ip, mac))
     except Exception as e:
         print(f"[❌] Failed to read ARP table: {e}")
         input("Press Enter to return...")
         return
-
+    
+    if not all_devices:
+        print("[❌] No live devices found.")
+        input("\nPress Enter to return...")
+        return
+    
+    # Categorize devices
+    devices = []
+    multicast_addresses = []
+    broadcast_addresses = []
+    other_addresses = []
+    
+    for ip, mac in all_devices:
+        # Handle "Interface:" entries - extract the actual IP
+        if ip == "Interface:":
+            ip = mac  # The IP is in the mac field for these entries
+            mac = "local-interface"
+        
+        try:
+            ip_obj = ipaddress.IPv4Address(ip)
+            
+            # Check if it's broadcast (global broadcast or network broadcast)
+            if (ip == "255.255.255.255" or 
+                ip.endswith(".255") or 
+                mac == "ff-ff-ff-ff-ff-ff"):
+                broadcast_addresses.append((ip, mac))
+            # Check if it's multicast (224.0.0.0/4 and 239.0.0.0/8)
+            elif ip_obj.is_multicast:
+                multicast_addresses.append((ip, mac))
+            # Check if it's a local network device (in our subnet and not multicast/broadcast)
+            elif ip_obj in subnet:
+                devices.append((ip, mac))
+            # Everything else (like Tailscale IPs)
+            else:
+                other_addresses.append((ip, mac))
+                
+        except ipaddress.AddressValueError:
+            # If IP parsing fails, put it in other addresses
+            other_addresses.append((ip, mac))
+    
+    # Display categorized results
+    all_lines = []
+    
     if devices:
+        print("🖥️  DEVICES")
+        print("-" * 45)
+        device_lines = []
         for ip, mac in devices:
             print(f"[✅] {ip} → {mac}")
-        lines = [f"{ip} → {mac}" for ip, mac in devices]
-        write_html_section("LAN IP Scanner", lines)
-        print("[💾] Appended to report.html")
-    else:
-        print("[❌] No live devices found.")
-
+            device_lines.append(f"{ip} → {mac}")
+        all_lines.extend(["=== DEVICES ==="] + device_lines + [""])
+        print()
+    
+    if multicast_addresses:
+        print("📡 MULTICAST ADDRESSES")
+        print("-" * 47)
+        multicast_lines = []
+        for ip, mac in multicast_addresses:
+            # Add description for known multicast addresses
+            description = get_multicast_description(ip)
+            print(f"[📡] {ip} → {mac} {description}")
+            multicast_lines.append(f"{ip} → {mac} {description}")
+        all_lines.extend(["=== MULTICAST ADDRESSES ==="] + multicast_lines + [""])
+        print()
+    
+    if broadcast_addresses:
+        print("📢 BROADCAST ADDRESSES")
+        print("-" * 47)
+        broadcast_lines = []
+        for ip, mac in broadcast_addresses:
+            print(f"[📢] {ip} → {mac}")
+            broadcast_lines.append(f"{ip} → {mac}")
+        all_lines.extend(["=== BROADCAST ADDRESSES ==="] + broadcast_lines + [""])
+        print()
+    
+    if other_addresses:
+        print("🔍 OTHER ADDRESSES")
+        print("-" * 43)
+        other_lines = []
+        for ip, mac in other_addresses:
+            print(f"[🔍] {ip} → {mac}")
+            other_lines.append(f"{ip} → {mac}")
+        all_lines.extend(["=== OTHER ADDRESSES ==="] + other_lines + [""])
+        print()
+    
+    # Write to HTML report
+    write_html_section("LAN IP Scanner", all_lines)
+    print("[💾] Appended to report.html")
+    
     input("\nPress Enter to return...")
+
+def get_multicast_description(ip):
+    """Return description for known multicast addresses"""
+    descriptions = {
+        "224.0.0.22": "(IGMP)",
+        "224.0.0.251": "(mDNS - Service Discovery)",
+        "224.0.0.252": "(LLMNR - Name Resolution)",
+        "239.255.255.250": "(UPnP/SSDP - Device Discovery)",
+        "224.0.0.1": "(All Systems Multicast)",
+        "224.0.0.2": "(All Routers Multicast)"
+    }
+    return descriptions.get(ip, "")
 
 
 def run():
