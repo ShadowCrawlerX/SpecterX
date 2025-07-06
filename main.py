@@ -14,7 +14,7 @@ def print_banner():
    ╚════██║██╔═══╝ ██╔══╝  ██║        ██║   ██╔══╝  ██╔═══╝    ██╔██╗
    ███████║██║     ███████╗╚██████╗   ██║   ███████╗██║       ██╔╝ ██╗ 
    ╚══════╝╚═╝     ╚══════╝ ╚═════╝   ╚═╝   ╚══════╝╚═╝       ╚═╝  ╚═╝
-            by Scarlet | Recon & OSINT Toolkit
+            by toxictager | Recon & OSINT Toolkit
     """)
 
 def main():
@@ -24,9 +24,8 @@ def main():
         print("""
 [1] Technical Recon (ReconWarden X)
 [2] OSINT Toolkit
-[3] Generate Report
-[4] Brute-Force
-[5] Exit
+[3] Brute-Force
+[4] Exit
         """)
         choice = input("Select an option: ").strip()
 
@@ -35,10 +34,8 @@ def main():
         elif choice == '2':
             osint.run()
         elif choice == '3':
-            reporter.run()
-        elif choice == '4':
             brute.run()
-        elif choice == '5':
+        elif choice == '4':
             print("Goodbye.")
             break
         else:

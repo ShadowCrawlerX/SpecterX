@@ -2,6 +2,7 @@ import os
 import dns.resolver
 from datetime import datetime
 from utils.reporter import write_html_section
+from utils.progress import with_progress
 
 
 def run_subdomain_scan():
@@ -21,13 +22,16 @@ def run_subdomain_scan():
     print(f"\n[🔍] Scanning subdomains of: {domain}\n")
     found = []
 
+    resolver = dns.resolver.Resolver()
+    resolver.nameservers = ["8.8.8.8", "1.1.1.1"]  # Google + Cloudflare
+
     try:
         with open(wordlist_path, "r") as f:
             for word in f:
                 sub = word.strip()
                 full_domain = f"{sub}.{domain}"
                 try:
-                    answers = dns.resolver.resolve(full_domain, "A")
+                    answers = resolver.resolve(full_domain, "A")
                     ips = [r.address for r in answers]
                     print(f"[✅] {full_domain} → {', '.join(ips)}")
                     found.append((full_domain, ips))
